@@ -1,0 +1,59 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net48</TargetFramework>
+        <OutputType>Library</OutputType>
+        <AssemblyName>FriendlyFireManager</AssemblyName>
+        <RootNamespace>FriendlyFireManager</RootNamespace>
+
+        <!-- Plugin version (shown by LabAPI). Bump it before every GitHub release. -->
+        <Version>1.0.0</Version>
+
+        <LangVersion>latestmajor</LangVersion>
+        <Nullable>enable</Nullable>
+        <Platforms>AnyCPU</Platforms>
+        <!-- Needed by the assembly publicizer (access to private game members) -->
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <DebugType>embedded</DebugType>
+        <Deterministic>true</Deterministic>
+    </PropertyGroup>
+
+    <!--
+        Game assemblies are NOT part of the repository (they belong to Northwood).
+        The build takes them from the SL_REFERENCES folder = "SCPSL_Data/Managed" of an SCP:SL dedicated server:
+          * environment variable SL_REFERENCES, or
+          * a local References.props.user file next to the .sln (copy References.props.example, it is git-ignored).
+        GitHub Actions downloads them automatically (see .github/workflows).
+    -->
+    <Import Project="..\References.props.user" Condition="Exists('..\References.props.user')" />
+
+    <ItemGroup>
+        <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.3" PrivateAssets="all" />
+        <PackageReference Include="Lib.Harmony" Version="2.2.2" />
+        <!-- LabApi.dll ships with the game: compile against it, don't copy it to the output -->
+        <PackageReference Include="Northwood.LabAPI" Version="1.1.7" ExcludeAssets="runtime" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- Publicize="true": the code uses private members of the game (same as a publicized Assembly-CSharp.dll) -->
+        <Reference Include="Assembly-CSharp" HintPath="$(SL_REFERENCES)\Assembly-CSharp.dll" Publicize="true" Private="false" />
+        <Reference Include="Assembly-CSharp-firstpass" HintPath="$(SL_REFERENCES)\Assembly-CSharp-firstpass.dll" Private="false" />
+        <Reference Include="CommandSystem.Core" HintPath="$(SL_REFERENCES)\CommandSystem.Core.dll" Private="false" />
+        <Reference Include="Mirror" HintPath="$(SL_REFERENCES)\Mirror.dll" Private="false" />
+        <Reference Include="NorthwoodLib" HintPath="$(SL_REFERENCES)\NorthwoodLib.dll" Private="false" />
+        <Reference Include="Pooling" HintPath="$(SL_REFERENCES)\Pooling.dll" Private="false" />
+        <Reference Include="UnityEngine.CoreModule" HintPath="$(SL_REFERENCES)\UnityEngine.CoreModule.dll" Private="false" />
+        <Reference Include="UnityEngine.PhysicsModule" HintPath="$(SL_REFERENCES)\UnityEngine.PhysicsModule.dll" Private="false" />
+    </ItemGroup>
+
+    <Target Name="CheckSlReferences" BeforeTargets="PrepareForBuild">
+        <Error Condition="'$(SL_REFERENCES)' == '' Or !Exists('$(SL_REFERENCES)\Assembly-CSharp.dll')"
+               Text="SCP:SL references not found. Set SL_REFERENCES (environment variable or References.props.user) to the 'SCPSL_Data/Managed' folder of an SCP:SL dedicated server. Current value: '$(SL_REFERENCES)'." />
+    </Target>
+
+    <!-- Local builds on Windows: copy the plugin into the local LabAPI plugins folder, if it exists -->
+    <Target Name="CopyToLocalServer" AfterTargets="Build" Condition="'$(OS)' == 'Windows_NT' And '$(CI)' != 'true' And Exists('$(APPDATA)\SCP Secret Laboratory\LabAPI\plugins\global')">
+        <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(APPDATA)\SCP Secret Laboratory\LabAPI\plugins\global" />
+    </Target>
+
+</Project>

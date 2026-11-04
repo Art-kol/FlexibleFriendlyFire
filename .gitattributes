@@ -1,0 +1,13 @@
+# Normalize line endings in the repository; checkout uses the platform default
+* text=auto
+
+*.cs      text diff=csharp
+*.csproj  text
+*.sln     text eol=crlf
+*.props   text
+*.md      text
+*.yml     text eol=lf
+
+*.dll     binary
+*.png     binary
+*.jpg     binary

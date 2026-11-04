@@ -1,0 +1,43 @@
+# When a GitHub release is published, builds the plugin and attaches the DLLs to that release.
+# Before publishing a release, bump <Version> in FriendlyFireManager/FriendlyFireManager.csproj.
+name: Release
+
+on:
+  release:
+    types: [ published ]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    env:
+      OUTPUT: FriendlyFireManager/bin/Release/net48
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Download SCP:SL references
+        id: references
+        uses: Axwabo/scpsl-references-downloader@v1
+
+      - name: Build
+        env:
+          SL_REFERENCES: ${{ steps.references.outputs.target }}
+        run: dotnet build FriendlyFireManager.sln -c Release
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{ env.OUTPUT }}/FriendlyFireManager.dll
+            ${{ env.OUTPUT }}/0Harmony.dll
+          fail_on_unmatched_files: true

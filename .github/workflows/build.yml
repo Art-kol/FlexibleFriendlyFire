@@ -1,0 +1,44 @@
+# Builds the plugin on every push / pull request and keeps the DLL as a downloadable workflow artifact.
+name: Build
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    env:
+      OUTPUT: FriendlyFireManager/bin/Release/net48
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      # Game DLLs (SCPSL_Data/Managed of the dedicated server) are downloaded from Steam, never stored in the repo
+      - name: Download SCP:SL references
+        id: references
+        uses: Axwabo/scpsl-references-downloader@v1
+
+      - name: Build
+        env:
+          SL_REFERENCES: ${{ steps.references.outputs.target }}
+        run: dotnet build FriendlyFireManager.sln -c Release
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: FriendlyFireManager
+          path: |
+            ${{ env.OUTPUT }}/FriendlyFireManager.dll
+            ${{ env.OUTPUT }}/0Harmony.dll
+          if-no-files-found: error
+          retention-days: 14
