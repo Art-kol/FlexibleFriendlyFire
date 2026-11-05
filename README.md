@@ -4,8 +4,6 @@
 ![LabAPI](https://img.shields.io/badge/LabAPI-1.1.7-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-**English** | [Русский](README.ru.md)
-
 A [LabAPI](https://github.com/northwood-studios/LabAPI) plugin for SCP: Secret Laboratory that lets server staff
 **allow or block damage between any players and roles** with one Remote Admin command. That includes
 **SCP vs SCP**: once an SCP is allowed to hurt another SCP, its attacks *and* its abilities work on that SCP
