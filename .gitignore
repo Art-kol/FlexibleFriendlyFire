@@ -5,12 +5,12 @@ obj/
 [Rr]elease/
 Output/
 
-# Game assemblies must never be committed
+# Game assemblies
 libs/
 *.dll
 *.pdb
 
-# Local reference path (see References.props.example)
+# Local reference path
 References.props.user
 
 # Visual Studio

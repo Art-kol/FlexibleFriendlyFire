@@ -1,6 +1,5 @@
 <!--
     Copy this file to "References.props.user" (same folder) and set the path below.
-    References.props.user is git-ignored, so your local path never ends up on GitHub.
 
     The folder is "SCPSL_Data/Managed" of an SCP:SL dedicated server, for example
       Windows: C:\SteamCMD\steamapps\common\SCP Secret Laboratory Dedicated Server\SCPSL_Data\Managed

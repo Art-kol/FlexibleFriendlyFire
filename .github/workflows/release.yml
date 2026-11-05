@@ -1,5 +1,3 @@
-# When a GitHub release is published, builds the plugin and attaches the DLLs to that release.
-# Before publishing a release, bump <Version> in FriendlyFireManager/FriendlyFireManager.csproj.
 name: Release
 
 on:

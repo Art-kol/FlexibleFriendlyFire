@@ -1,4 +1,3 @@
-# Builds the plugin on every push / pull request and keeps the DLL as a downloadable workflow artifact.
 name: Build
 
 on:
@@ -23,7 +22,7 @@ jobs:
         with:
           dotnet-version: 9.0.x
 
-      # Game DLLs (SCPSL_Data/Managed of the dedicated server) are downloaded from Steam, never stored in the repo
+      # Game DLLs (SCPSL_Data/Managed of the dedicated server)
       - name: Download SCP:SL references
         id: references
         uses: Axwabo/scpsl-references-downloader@v1

@@ -1,4 +1,4 @@
-# Normalize line endings in the repository; checkout uses the platform default
+# Normalize line endings in the repository
 * text=auto
 
 *.cs      text diff=csharp
