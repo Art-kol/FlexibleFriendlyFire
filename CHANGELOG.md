@@ -2,7 +2,7 @@
 
 ## 1.0.0
 
-First standalone release (the FriendlyFiresModule of TakChanges as its own LabAPI plugin).
+First standalone release (the FriendlyFiresModule as its own LabAPI plugin).
 
 - `fire allow/block/reset/list` command for player and role rules (Remote Admin and server console,
   `ffm.manage` permission).
