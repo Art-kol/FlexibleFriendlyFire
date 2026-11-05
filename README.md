@@ -1,6 +1,6 @@
 # FriendlyFireManager
 
-[![Build](https://github.com/YOUR_GITHUB/FriendlyFireManager/actions/workflows/build.yml/badge.svg)](https://github.com/YOUR_GITHUB/FriendlyFireManager/actions/workflows/build.yml)
+[![Build](https://github.com/Art-kol/FriendlyFireManager/actions/workflows/build.yml/badge.svg)](https://github.com/YOUR_GITHUB/FriendlyFireManager/actions/workflows/build.yml)
 ![LabAPI](https://img.shields.io/badge/LabAPI-1.1.7-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
