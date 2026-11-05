@@ -1,6 +1,6 @@
 # FriendlyFireManager
 
-[![Build](https://github.com/Art-kol/FriendlyFireManager/actions/workflows/build.yml/badge.svg)](https://github.com/YOUR_GITHUB/FriendlyFireManager/actions/workflows/build.yml)
+[![Build](https://github.com/Art-kol/FriendlyFireManager/actions/workflows/build.yml/badge.svg)](https://github.com/Art-kol/FriendlyFireManager/actions/workflows/build.yml)
 ![LabAPI](https://img.shields.io/badge/LabAPI-1.1.7-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -63,7 +63,7 @@ button glass (neither by shooting nor with throwables). SCPs allowed to hurt at 
 
 ## Installation
 
-1. Download `FriendlyFireManager.dll` and `0Harmony.dll` from [Releases](https://github.com/YOUR_GITHUB/FriendlyFireManager/releases).
+1. Download `FriendlyFireManager.dll` and `0Harmony.dll` from [Releases](https://github.com/Art-kol/FriendlyFireManager/releases).
 2. Put `FriendlyFireManager.dll` into `LabAPI/plugins/global/` (or `LabAPI/plugins/<port>/`).
 3. Put `0Harmony.dll` into `LabAPI/dependencies/global/` (skip it if another plugin already installed Harmony 2.x).
 4. Give the permission to your staff groups (see below) and restart the server.
