@@ -33,6 +33,7 @@ namespace FriendlyFireManager {
             // SCP-079
             Scp079Events.BlackedOutRoom += FireScp079Events.FireLogics079BlackedOutRoom;
             Scp079Events.BlackedOutZone += FireScp079Events.FireLogics079BlackedOutZone;
+            Scp079Events.Recontaining += FireScp079Events.FireLogics079Recontaining;
             Scp079Events.Recontained += FireScp079Events.FireLogics079Recontained;
             Scp079Events.LockingDoor += FireScp079Events.FireLogics079LockingDoor;
             Scp079Events.LockingDownRoom += FireScp079Events.FireLogics079LockingDownRoom;
@@ -41,6 +42,7 @@ namespace FriendlyFireManager {
             PlayerEvents.ActivatingGenerator += FireScp079Events.FireLogics079ActivatingGen;
             PlayerEvents.UnlockingGenerator += FireScp079Events.FireLogics079UnlockingGen;
             PlayerEvents.DamagingWindow += FireScp079Events.FireLogics079ShootingWindow;
+            PlayerEvents.DamagedWindow += FireScp079Events.FireLogics079GlassDamaged;
             ServerEvents.RoomLightChanged += FireScp079Events.OnLightInRoomChanged;
             PlayerEvents.RoomChanged += FireScp079Events.OnRoomChanged;
             ServerEvents.DoorLockChanged += FireScp079Events.OnChangedLockReasonDoor;
@@ -81,6 +83,7 @@ namespace FriendlyFireManager {
 
             Scp079Events.BlackedOutRoom -= FireScp079Events.FireLogics079BlackedOutRoom;
             Scp079Events.BlackedOutZone -= FireScp079Events.FireLogics079BlackedOutZone;
+            Scp079Events.Recontaining -= FireScp079Events.FireLogics079Recontaining;
             Scp079Events.Recontained -= FireScp079Events.FireLogics079Recontained;
             Scp079Events.LockingDoor -= FireScp079Events.FireLogics079LockingDoor;
             Scp079Events.LockingDownRoom -= FireScp079Events.FireLogics079LockingDownRoom;
@@ -89,6 +92,7 @@ namespace FriendlyFireManager {
             PlayerEvents.ActivatingGenerator -= FireScp079Events.FireLogics079ActivatingGen;
             PlayerEvents.UnlockingGenerator -= FireScp079Events.FireLogics079UnlockingGen;
             PlayerEvents.DamagingWindow -= FireScp079Events.FireLogics079ShootingWindow;
+            PlayerEvents.DamagedWindow -= FireScp079Events.FireLogics079GlassDamaged;
             ServerEvents.RoomLightChanged -= FireScp079Events.OnLightInRoomChanged;
             PlayerEvents.RoomChanged -= FireScp079Events.OnRoomChanged;
             ServerEvents.DoorLockChanged -= FireScp079Events.OnChangedLockReasonDoor;
@@ -116,6 +120,7 @@ namespace FriendlyFireManager {
             FireScp079Events.DoorLockOwners.Clear();
             FireScp079Events.TeslaActivations.Clear();
             FireScp079Events.PlayersWithNightVision.Clear();
+            FireScp079Events.SparedFromRecontainment = null;
             ScpFfProxy.Reset();
             ScpFfVisibility.Clear();
         }

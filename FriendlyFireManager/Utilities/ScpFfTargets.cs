@@ -1,5 +1,7 @@
+using System;
 using PlayerRoles;
 using PlayerRoles.FirstPersonControl;
+using PlayerRoles.PlayableScps.Scp079;
 
 namespace FriendlyFireManager.Utilities {
     // Shared "can this SCP use its ability on that SCP?" rule for the SCP-vs-SCP secondary abilities
@@ -37,17 +39,91 @@ namespace FriendlyFireManager.Utilities {
         // There can be several SCP-079s and an SCP may be allowed against only one of them:
         // anything that works against "SCP-079 in general" (generators, recontainment glass) needs at least one.
         public static bool CanAttackAny079(ReferenceHub? scp) {
-            if (scp == null || !scp.IsSCP()) {
+            return scp != null && scp.IsSCP() && MayActAgainst079(scp, Scp079Requirement.Any);
+        }
+
+        // May this player / SCP hurt this SCP-079 (for generators and the recontainment button)?
+        //   SCP:   only with an explicit allow (SCPs never hurt SCP-079 in vanilla)
+        //   human: unless explicitly blocked (humans hurt SCP-079 in vanilla)
+        public static bool MayHit079(ReferenceHub actor, ReferenceHub scp079) {
+            var rule = FireLogics.CanDamage(actor, scp079);
+            return actor.IsSCP() ? rule == true : rule != false;
+        }
+
+        // Something done against SCP-079 in general (generators, recontainment button) while there may be several
+        // SCP-079s and the actor may hurt only some of them (config scp079.*): Any = one is enough, All = all of them.
+        // No SCP-079 at all: humans -> vanilla (allowed), SCPs -> nothing they could act against.
+        public static bool MayActAgainst079(ReferenceHub? actor, Scp079Requirement requirement) {
+            if (actor == null) {
                 return false;
             }
 
-            foreach (var scp079 in PlayerRoles.PlayableScps.Scp079.Scp079Role.ActiveInstances) {
-                if (scp079.TryGetOwner(out var owner) && IsFfScp079Target(scp, owner)) {
+            var total = 0;
+            var allowed = 0;
+
+            foreach (var scp079 in Scp079Role.ActiveInstances) {
+                if (!scp079.TryGetOwner(out var owner) || owner == actor) {
+                    continue;
+                }
+
+                total++;
+                if (MayHit079(actor, owner)) {
+                    allowed++;
+                }
+            }
+
+            if (total == 0) {
+                return !actor.IsSCP();
+            }
+
+            return requirement == Scp079Requirement.All ? allowed == total : allowed > 0;
+        }
+
+        // ================= RECONTAINMENT BUTTON GLASS =================
+
+        private static Scp079Recontainer[] _recontainers = Array.Empty<Scp079Recontainer>();
+
+        // Exactly the glass the game itself watches (Scp079Recontainer._activatorGlass), compared by reference.
+        public static bool IsRecontainerGlass(BreakableWindow? window) {
+            if (window == null) {
+                return false;
+            }
+
+            foreach (var recontainer in GetRecontainers()) {
+                if (ReferenceEquals(recontainer._activatorGlass, window)) {
                     return true;
                 }
             }
 
             return false;
+        }
+
+        // Is any recontainment button glass broken (= recontainment started by the button, not by the last SCP dying)?
+        public static bool IsRecontainerGlassBroken() {
+            foreach (var recontainer in GetRecontainers()) {
+                if (recontainer._activatorGlass != null && recontainer._activatorGlass.IsBroken) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // Cached per map; looked up again after a round restart (the old objects are destroyed)
+        private static Scp079Recontainer[] GetRecontainers() {
+            var valid = _recontainers.Length > 0;
+            foreach (var recontainer in _recontainers) {
+                if (recontainer == null) {
+                    valid = false;
+                    break;
+                }
+            }
+
+            if (!valid) {
+                _recontainers = UnityEngine.Object.FindObjectsByType<Scp079Recontainer>(UnityEngine.FindObjectsSortMode.None);
+            }
+
+            return _recontainers;
         }
 
         // Drop-in replacement for HitboxIdentity.IsEnemy(ReferenceHub, ReferenceHub) in vanilla ability code:

@@ -1,16 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using CustomPlayerEffects;
+﻿using CustomPlayerEffects;
 using Interactables.Interobjects.DoorUtils;
 using LabApi.Events.Arguments.PlayerEvents;
-using LabApi.Events.Arguments.Scp079Events;
 using LabApi.Events.Arguments.ServerEvents;
-using LabApi.Features.Wrappers;
+using LabApi.Events.Arguments.Scp079Events;
 using MapGeneration;
 using PlayerRoles;
 using PlayerRoles.PlayableScps.Scp079;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using LabApi.Features.Wrappers;
+using FriendlyFireManager.Utilities;
 using static FriendlyFireManager.FireLogics;
+using Logger = LabApi.Features.Console.Logger;
 
 namespace FriendlyFireManager.Handlers {
     public class FireScp079Events {
@@ -19,7 +21,10 @@ namespace FriendlyFireManager.Handlers {
         public static readonly Dictionary<Door, ReferenceHub> DoorLockOwners = new();
         public static readonly Dictionary<TeslaGate, TeslaActivationInfo> TeslaActivations = new();
         public static readonly HashSet<Player> PlayersWithNightVision = new();
-        public static BreakableWindow? Recontainer;
+
+        // SCP-079s that survive the recontainment started by the button glass (config scp079.*_recontainment_targets),
+        // remembered when the glass breaks. null = the glass isn't broken yet (or nothing was remembered).
+        public static HashSet<ReferenceHub>? SparedFromRecontainment;
         public class TeslaActivationInfo {
             public DateTime Time;
             public required Player Scp079;
@@ -130,16 +135,28 @@ namespace FriendlyFireManager.Handlers {
         }
 
 
+        // Several SCP-079s: how many of them the player / SCP must be allowed to hurt (config scp079.*: Any / All).
+        // SCPs need an explicit allow, humans just must not be blocked (ScpFfTargets.MayHit079).
+        public static Scp079Requirement GeneratorRequirement(ReferenceHub actor) {
+            var config = FfConfig.Current.Scp079;
+            return actor.IsSCP() ? config.ScpGenerators : config.HumanGenerators;
+        }
+
+        public static Scp079Requirement RecontainmentButtonRequirement(ReferenceHub actor) {
+            var config = FfConfig.Current.Scp079;
+            return actor.IsSCP() ? config.ScpRecontainmentButton : config.HumanRecontainmentButton;
+        }
+
         // Purpose: If player cant attack 079, player will not be able to activate the gen
         // What it does: If player cant attack 079 then we decline the event
+        //               (SCPs pulling the lever too, see Patches/Scp079ScpFfPatches Scp079GeneratorLeverScpPatch)
         public static void FireLogics079ActivatingGen(PlayerActivatingGeneratorEventArgs ev) {
-            var scp079s = Player.List.Where(p => p.Role == RoleTypeId.Scp079);
-
-            if (!scp079s.Any()) {
+            if (ev.Player == null) {
                 return;
             }
 
-            if (!scp079s.Any(scp079 => CanDamage(ev.Player.ReferenceHub, scp079.ReferenceHub) != false)) {
+            var actor = ev.Player.ReferenceHub;
+            if (!ScpFfTargets.MayActAgainst079(actor, GeneratorRequirement(actor))) {
                 ev.IsAllowed = false;
             }
         }
@@ -147,13 +164,12 @@ namespace FriendlyFireManager.Handlers {
         // Purpose: If player cant attack 079, player will not be able to unlock the gen with keycard
         // What it does: If player cant attack 079 then we decline the event
         public static void FireLogics079UnlockingGen(PlayerUnlockingGeneratorEventArgs ev) {
-            var scp079s = Player.List.Where(p => p.Role == RoleTypeId.Scp079);
-
-            if (!scp079s.Any()) {
+            if (ev.Player == null) {
                 return;
             }
 
-            if (!scp079s.Any(scp079 => CanDamage(ev.Player.ReferenceHub, scp079.ReferenceHub) != false)) {
+            var actor = ev.Player.ReferenceHub;
+            if (!ScpFfTargets.MayActAgainst079(actor, GeneratorRequirement(actor))) {
                 ev.CanOpen = false;
                 ev.IsAllowed = false;
             }
@@ -165,21 +181,75 @@ namespace FriendlyFireManager.Handlers {
         // Problem: This event works only for shooting. If u throw a projectile at the window it will break anyways
         // Solution: Check Patches/SCP079BreakWindowPatchThrowables.cs
         public static void FireLogics079ShootingWindow(PlayerDamagingWindowEventArgs ev) {
-            if (!Recontainer) {
-                Recontainer = UnityEngine.Object.FindAnyObjectByType<Scp079Recontainer>()._activatorGlass;
+            if (ev.Player == null || !ScpFfTargets.IsRecontainerGlass(ev.Window)) {
+                return;
             }
 
-            if (Recontainer != null && ev.Window == Recontainer) {
-                var scp079s = Player.List.Where(p => p.Role == RoleTypeId.Scp079);
+            var actor = ev.Player.ReferenceHub;
+            if (!ScpFfTargets.MayActAgainst079(actor, RecontainmentButtonRequirement(actor))) {
+                ev.IsAllowed = false;
+            }
+        }
 
-                if (!scp079s.Any()) {
-                    return;
+        // ================= RECONTAINMENT: WHICH SCP-079s DIE =================
+        // Config scp079.scp_recontainment_targets / human_recontainment_targets:
+        //   All        - every SCP-079 is recontained (vanilla)
+        //   Attackable - only the SCP-079s the one who broke the glass may hurt; the others survive
+        // Decided once, when the glass breaks: until the recontainment (after the CASSIE countdown) the rules or the
+        // breaker's role may change. The recontainment that starts because the last other SCP died is not touched.
+
+        // The glass took damage from a player (shots, SCP attacks): did it just break?
+        public static void FireLogics079GlassDamaged(PlayerDamagedWindowEventArgs ev) {
+            if (ev.Player == null || ev.Window == null || !ev.Window.IsBroken || !ScpFfTargets.IsRecontainerGlass(ev.Window)) {
+                return;
+            }
+
+            RememberGlassBreaker(ev.Player.ReferenceHub);
+        }
+
+        // Also called by Patches/SCP079BreakWindowPatchThrowables (vanilla doesn't record who threw the item)
+        public static void RememberGlassBreaker(ReferenceHub breaker) {
+            if (SparedFromRecontainment != null) {
+                return;
+            }
+
+            SparedFromRecontainment = GetSpared079s(breaker);
+        }
+
+        public static void FireLogics079Recontaining(Scp079RecontainingEventArgs ev) {
+            if (ev.Player == null || !ScpFfTargets.IsRecontainerGlassBroken()) {
+                return; // not the button: vanilla, every SCP-079 dies
+            }
+
+            if (SparedFromRecontainment == null) {
+                if (ev.Activator == null || ev.Activator.IsDestroyed) {
+                    return; // nobody to ask: vanilla
                 }
 
-                if (!scp079s.Any(scp079 => CanDamage(ev.Player.ReferenceHub, scp079.ReferenceHub) != false)) {
-                    ev.IsAllowed = false;
+                SparedFromRecontainment = GetSpared079s(ev.Activator.ReferenceHub);
+            }
+
+            if (SparedFromRecontainment.Contains(ev.Player.ReferenceHub)) {
+                ev.IsAllowed = false;
+            }
+        }
+
+        private static HashSet<ReferenceHub> GetSpared079s(ReferenceHub breaker) {
+            var spared = new HashSet<ReferenceHub>(ReferenceHubComparer.Instance);
+
+            var config = FfConfig.Current.Scp079;
+            var targets = breaker.IsSCP() ? config.ScpRecontainmentTargets : config.HumanRecontainmentTargets;
+            if (targets == Scp079RecontainmentTargets.All) {
+                return spared;
+            }
+
+            foreach (var scp079 in Scp079Role.ActiveInstances) {
+                if (scp079.TryGetOwner(out var owner) && owner != breaker && !ScpFfTargets.MayHit079(breaker, owner)) {
+                    spared.Add(owner);
                 }
             }
+
+            return spared;
         }
 
 
@@ -194,8 +264,7 @@ namespace FriendlyFireManager.Handlers {
                         PlayersWithNightVision.Remove(player);
                     }
                 }
-
-                if (RoomBlackoutOwners.TryGetValue(ev.Room, out _)) {
+                if (RoomBlackoutOwners.TryGetValue(ev.Room, out var scp079)) {
                     RoomBlackoutOwners.Remove(ev.Room);
                 }
 
@@ -214,7 +283,7 @@ namespace FriendlyFireManager.Handlers {
             var player = ev.Player;
             var room = ev.NewRoom;
 
-            var NewRoomHasLight = room.AllLightControllers.All(lightcontroller => lightcontroller.LightsEnabled);
+            bool NewRoomHasLight = room.AllLightControllers.All(lightcontroller => lightcontroller.LightsEnabled);
 
             if (NewRoomHasLight) {
                 if (PlayersWithNightVision.Contains(player)) {

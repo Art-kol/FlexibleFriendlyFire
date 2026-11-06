@@ -3,7 +3,7 @@ using PlayerRoles;
 
 // File for UI that shows more readable data
 namespace FriendlyFireManager {
-    public class StaticConstants {
+    public class StaticData {
         public static readonly Dictionary<RoleTypeId, string> RolesTranslation = new Dictionary<RoleTypeId, string> {
             { RoleTypeId.Tutorial, "Tutorial" },
             { RoleTypeId.ClassD, "Class-D" },

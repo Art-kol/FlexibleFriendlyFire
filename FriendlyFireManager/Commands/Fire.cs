@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Text;
 using CommandSystem;
-using FriendlyFireManager.Commands.HelpersForCommand;
-using FriendlyFireManager.Utilities;
 using LabApi.Features.Wrappers;
 using PlayerRoles;
+using FriendlyFireManager.Commands.HelpersForCommand;
+using FriendlyFireManager.Utilities;
 using Utils;
 using static FriendlyFireManager.StaticConstants;
 
@@ -30,10 +30,10 @@ namespace FriendlyFireManager.Commands {
 
             if (reset && (arguments.Count == 0 || string.IsNullOrWhiteSpace(arguments.At(0)))) {
                 FireLogics.ClearAll();
-
+                
                 // ADDED:
                 FfProxy.ScpFfProxy.RequestRefresh();
-
+                
                 response = "All fire rules have been reset.";
                 return true;
             }
@@ -43,14 +43,14 @@ namespace FriendlyFireManager.Commands {
                 return false;
             }
 
-            var type = arguments.At(0).ToUpper();
+            string type = arguments.At(0).ToUpper();
 
-            var attackerType = type[0];
-            var targetType = type[1];
+            char attackerType = type[0];
+            char targetType = type[1];
 
-            var mutual = true;
+            bool mutual = true;
 
-            if (arguments.Count >= 4 && int.TryParse(arguments.At(3), out var res)) {
+            if (arguments.Count >= 4 && int.TryParse(arguments.At(3), out int res)) {
                 mutual = res != 0;
             }
 
@@ -255,6 +255,11 @@ namespace FriendlyFireManager.Commands {
             }
 
 
+            // Not a rule, but works like "fire allow RR <every SCP> <every SCP>" under all rules
+            var serverFriendlyFire = FireLogics.ScpFriendlyFireFromServer
+                ? "\n\nSCP vs SCP: allowed by the server friendly fire (config scp_vs_scp_with_server_friendly_fire)."
+                : "";
+
             var activeFFRules = new StringBuilder();
 
             activeFFRules.AppendLine("=== ALLOW RULES ===");
@@ -280,11 +285,11 @@ namespace FriendlyFireManager.Commands {
                 FireLogics.BlockRolePlayerFriendlyFire.Count == 0 &&
                 FireLogics.BlockRoleRoleFriendlyFire.Count == 0) {
 
-                response = "No fire rules found.";
+                response = "No fire rules found." + serverFriendlyFire;
                 return true;
             }
 
-            response = activeFFRules.ToString();
+            response = activeFFRules + serverFriendlyFire;
             return true;
         }
 

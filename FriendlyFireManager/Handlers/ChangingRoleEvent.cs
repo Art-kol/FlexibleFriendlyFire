@@ -4,7 +4,7 @@ using LabApi.Events.Arguments.PlayerEvents;
 using static FriendlyFireManager.FireLogics;
 using static FriendlyFireManager.Handlers.FireScp079Events;
 using static FriendlyFireManager.Handlers.FireSCPEvents;
-using static FriendlyFireManager.StaticConstants;
+using static FriendlyFireManager.StaticData;
 
 namespace FriendlyFireManager.Handlers {
     public static class FireChangingRoleEvent {

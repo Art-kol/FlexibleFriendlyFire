@@ -1,7 +1,14 @@
-﻿using System.Collections.Generic;
+﻿using Hazards;
+using LabApi.Events.Handlers;
 using LabApi.Features.Wrappers;
 using PlayerRoles;
+using System.Collections.Generic;
+using static FriendlyFireManager.Handlers.FireChangingRoleEvent;
 using static FriendlyFireManager.StaticConstants;
+using static FriendlyFireManager.Handlers.FireHurtingEvents;
+using static FriendlyFireManager.Handlers.FirePlayerLeftEvent;
+using static FriendlyFireManager.Handlers.FireSCPEvents;
+using static FriendlyFireManager.Handlers.FireScp079Events;
 
 namespace FriendlyFireManager {
     public static class FireLogics {
@@ -277,9 +284,20 @@ namespace FriendlyFireManager {
             }
 
 
+            // ================= PRIORITY 4: SERVER FRIENDLY FIRE =================
+            // Config scp_vs_scp_with_server_friendly_fire: while the vanilla friendly fire is on, every SCP may hurt
+            // every other SCP, as if there was an allow rule between them (any rule above still wins).
+            if (ScpFriendlyFireFromServer && attacker != target && attacker.IsSCP() && target.IsSCP()) {
+                return true;
+            }
+
+
             // ================= DEFAULT =================
             return null;
         }
+
+        // Vanilla friendly fire (ServerConsole.FriendlyFire = friendly_fire / RA "Server configs") + the config switch
+        public static bool ScpFriendlyFireFromServer => ServerConsole.FriendlyFire && FfConfig.Current.ScpVsScpWithServerFriendlyFire;
 
 
 

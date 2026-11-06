@@ -35,7 +35,7 @@ namespace FriendlyFireManager.FfProxy {
     //        SCP-939 with an FF SCP target -> Tutorial INSIDE the SCP it's aiming at, so its hitboxes
     //                                         sit where the lunge will collide
     //        everyone else                 -> Spectator, position never sent
-    //      Model: Fade 255 + 0.01 scale (+ inside the target SCP for 939), no footsteps.
+    //      Model: Fade 255 + 0.25 scale (+ inside the target SCP for 939), no footsteps.
     //   3. The server ignores the proxy as a target and resolves the real one:
     //        Scp106AttackPatch - replaces ServerProcessCmd, picks the target itself.
     //        Scp939LungePatch  - only when the client hit the proxy: maps it to the real SCP behind it,
@@ -63,9 +63,9 @@ namespace FriendlyFireManager.FfProxy {
         // ability / tesla / 096 / 173 logic ever touches it.
         public static readonly Vector3 ParkingPosition = new(5000f, 500f, 5000f);
 
-        // Model scale (hitboxes shrink with it). Not lower than ~0.2: the 939 client ignores hitboxes closer
-        // than ~0.63m horizontally, and with point-sized hitboxes one lunge frame can step over the detection
-        // window (~20% misses). 0.25 -> hitbox radius ~5cm, no misses. The model is hidden by Fade, and for
+        // Model scale (hitboxes shrink with it). Not lower than 0.2: the 939 client ignores hitboxes closer
+        // than 0.63m horizontally, and with point-sized hitboxes one lunge frame can step over the detection
+        // window (20% misses). 0.25 -> hitbox radius 5cm, no misses. The model is hidden by Fade, and for
         // SCP-939 it additionally sits inside the target SCP's body.
         public const float PROXY_SCALE = 0.25f;
 

@@ -1,8 +1,24 @@
 # Changelog
 
+## 1.1.0
+
+- `fire` needs no extra permission any more: whoever may switch the vanilla friendly fire (Remote Admin
+  `ServerConfigs` permission) may use it. The `command_permission` config key is gone.
+- Config `scp_vs_scp_with_server_friendly_fire`: while the vanilla friendly fire is on, SCPs may hurt each other.
+- Config `scp_vs_scp_damage`: damage of every SCP attack against other SCPs (`0` default, `-1` one-hit kill,
+  a fixed number or a percent of the target's max HP; a set value turns the attack's effects off).
+- Config `scp079`: several SCP-079s - Any / All for generators and the recontainment button (SCPs and humans
+  separately), and whether every SCP-079 or only the attackable ones are recontained.
+- SCP-3114's disguise fools the SCPs it may hurt (config `scp3114_disguise_fools_scps`).
+- `fire list` shows when SCP vs SCP is allowed by the server friendly fire.
+- Fixed: an error in the Tesla damage check when no Tesla gate was near the player; recontainment button checks no
+  longer fail when the map has no SCP-079 recontainer.
+- Recontainment by a human that is blocked from some SCP-079s: the spared ones are no longer counted as recontained
+  (CASSIE reports a failure if nobody was recontained).
+
 ## 1.0.0
 
-First standalone release (the FriendlyFiresModule as its own LabAPI plugin).
+First standalone release (the FriendlyFiresModule of TakChanges as its own LabAPI plugin).
 
 - `fire allow/block/reset/list` command for player and role rules (Remote Admin and server console,
   `ffm.manage` permission).

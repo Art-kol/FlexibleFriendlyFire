@@ -1,21 +1,17 @@
-﻿using System;
+﻿using CommandSystem;
+using System;
 using System.Collections.Generic;
-using CommandSystem;
-using LabApi.Features.Permissions;
 
 
 namespace FriendlyFireManager.Commands.HelpersForCommand {
     public class FirePreCommandChecks {
         // =============== SENDER CHECKS ===============
 
-        // The command works from the Remote Admin panel and from the server console. Players need the LabAPI
-        // permission from the config (command_permission, LabAPI/configs/permissions.yml); the server console
-        // always passes. An empty permission in the config lets everyone with RA access use the command.
+        // Same access as the vanilla friendly fire switch (Remote Admin -> Server configs = "setconfig friendly_fire"):
+        // the ServerConfigs permission of the RA group (config_remoteadmin.txt). The server console always has it.
         public static bool SenderCheck(ICommandSender sender, out string response) {
-            var permission = FriendlyFireManagerPlugin.Instance?.Config.CommandPermission;
-
-            if (!string.IsNullOrWhiteSpace(permission) && !sender.HasPermissions(permission!)) {
-                response = $"You don't have permission to use this command ({permission}).";
+            if (!sender.CheckPermission(PlayerPermissions.ServerConfigs, out var denied)) {
+                response = denied;
                 return false;
             }
 
@@ -49,8 +45,9 @@ namespace FriendlyFireManager.Commands.HelpersForCommand {
             }
 
             // Parse optional mode (0/1)
+            var attackerCanBeKilled = 1; // Default: attacked can kill attacker
             if (arguments.Count >= 4) {
-                if (!int.TryParse(arguments.At(3), out var attackerCanBeKilled) || (attackerCanBeKilled != 0 && attackerCanBeKilled != 1)) {
+                if (!int.TryParse(arguments.At(3), out attackerCanBeKilled) || (attackerCanBeKilled != 0 && attackerCanBeKilled != 1)) {
                     response = $"Invalid mode: {arguments.At(3)}. Must be 0 or 1.";
                     return false;
                 }

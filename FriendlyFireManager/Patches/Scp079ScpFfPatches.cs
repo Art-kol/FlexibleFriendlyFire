@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using CustomPlayerEffects;
-using FriendlyFireManager.Utilities;
 using HarmonyLib;
 using Interactables.Interobjects.DoorUtils;
 using LabApi.Events.Arguments.PlayerEvents;
@@ -11,14 +10,16 @@ using PlayerRoles;
 using PlayerRoles.PlayableScps;
 using PlayerRoles.PlayableScps.Scp079;
 using PlayerStatsSystem;
-using static FriendlyFireManager.Handlers.FireScp079Events;
+using FriendlyFireManager.Utilities;
 using Logger = LabApi.Features.Console.Logger;
+using static FriendlyFireManager.Handlers.FireScp079Events;
 
 namespace FriendlyFireManager.Patches {
     // SCP-079 against SCPs it may hit by FF rules (and SCPs that may hit SCP-079), mirroring Handlers/SCP079Events
     // for humans. "079 may hit SCP" = FireLogics.CanDamage(079, scp) == true, decided per SCP-079 (DoorLockOwners /
-    // RoomBlackoutOwners remember WHICH 079 locked/darkened what). "SCP may hit 079" = at least one SCP-079 with
-    // CanDamage(scp, 079) == true (ScpFfTargets.CanAttackAny079), like the human generator/window checks.
+    // RoomBlackoutOwners remember WHICH 079 locked/darkened what). "SCP may hit 079" = CanDamage(scp, 079) == true for
+    // at least one SCP-079, or for every one of them (config scp079.scp_generators / scp_recontainment_button: Any / All,
+    // ScpFfTargets.MayActAgainst079), like the human generator/window checks.
 
     // ================= DOORS / ROOM LOCKDOWN =================
 
@@ -138,7 +139,7 @@ namespace FriendlyFireManager.Patches {
         }
 
         public static bool IsScpForLever(ReferenceHub hub, bool includeZombies) {
-            return hub.IsSCP(includeZombies) && !ScpFfTargets.CanAttackAny079(hub);
+            return hub.IsSCP(includeZombies) && !ScpFfTargets.MayActAgainst079(hub, FfConfig.Current.Scp079.ScpGenerators);
         }
     }
 
@@ -146,8 +147,9 @@ namespace FriendlyFireManager.Patches {
 
     // Vanilla: the 079 recontainment glass has _preventScpDamage -> BreakableWindow.Damage rejects every SCP
     // attacker before any event. Here: an SCP that may hit at least one SCP-079 damages it like a human
-    // (PlayerDamagingWindow still fires -> FireLogics079ShootingWindow applies). Once it breaks, EVERY SCP-079
-    // dies - see the RecontainmentDamageHandler branch in Handlers/HurtingEvents.FireLogicsOnPlayerHurting.
+    // (PlayerDamagingWindow still fires -> FireLogics079ShootingWindow applies). Once it breaks, every SCP-079 dies, or
+    // only the ones this SCP may hurt (config scp079.scp_recontainment_targets) - see FireScp079Events
+    // .FireLogics079Recontaining and the RecontainmentDamageHandler branch in Handlers/HurtingEvents.
     // Only attacks that can hit windows at all can break it: SCP-939 claw/lunge, SCP-096, SCP-049-2, SCP-3114...
     // (SCP-173 / SCP-106 / SCP-049 attacks only hit players).
     [HarmonyPatch(typeof(BreakableWindow), nameof(BreakableWindow.Damage))]
@@ -156,12 +158,12 @@ namespace FriendlyFireManager.Patches {
             if (handler is not AttackerDamageHandler attackerHandler
                 || attackerHandler.Attacker.Role.GetTeam() != Team.SCPs
                 || !__instance._preventScpDamage
-                || !IsRecontainerGlass(__instance)) {
+                || !ScpFfTargets.IsRecontainerGlass(__instance)) {
                 return true; // vanilla
             }
 
             var attacker = attackerHandler.Attacker.Hub;
-            if (!ScpFfTargets.CanAttackAny079(attacker) || !IsAimingAt(attacker, __instance)) {
+            if (!ScpFfTargets.MayActAgainst079(attacker, FfConfig.Current.Scp079.ScpRecontainmentButton) || !IsAimingAt(attacker, __instance)) {
                 return true; // vanilla: SCPs can't damage it
             }
 
@@ -186,7 +188,7 @@ namespace FriendlyFireManager.Patches {
 
         // SCP attacks hit EVERY destructible around them (claw sphere, 939 lunge path, 096 charge), so clawing a
         // window next to the button would also break the button glass. An SCP must look straight at the glass.
-        public const float AIM_DISTANCE = 4f;
+        public const float AimDistance = 4f;
 
         private static int _aimMask;
 
@@ -200,21 +202,8 @@ namespace FriendlyFireManager.Patches {
             }
 
             var camera = attacker.PlayerCameraReference;
-            return UnityEngine.Physics.Raycast(camera.position, camera.forward, out var hit, AIM_DISTANCE, _aimMask)
+            return UnityEngine.Physics.Raycast(camera.position, camera.forward, out var hit, AimDistance, _aimMask)
                    && hit.collider.GetComponentInParent<BreakableWindow>() == window;
-        }
-
-        // Exactly the glass the game itself watches (Scp079Recontainer._activatorGlass, RefreshActivator), compared
-        // by reference. Doesn't rely on the shared FireScp079Events.Recontainer cache. Only reached for windows with
-        // _preventScpDamage hit by an SCP, so the lookup is rare.
-        private static bool IsRecontainerGlass(BreakableWindow window) {
-            foreach (var recontainer in UnityEngine.Object.FindObjectsByType<Scp079Recontainer>(UnityEngine.FindObjectsSortMode.None)) {
-                if (recontainer != null && ReferenceEquals(recontainer._activatorGlass, window)) {
-                    return true;
-                }
-            }
-
-            return false;
         }
     }
 }

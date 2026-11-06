@@ -6,6 +6,8 @@ using PlayerRoles.FirstPersonControl;
 using PlayerRoles.PlayableScps.Scp106;
 using RelativePositioning;
 using UnityEngine;
+using FriendlyFireManager.Utilities;
+using PlayerStatsSystem;
 using Utils.Networking;
 using Logger = LabApi.Features.Console.Logger;
 
@@ -60,9 +62,33 @@ namespace FriendlyFireManager.FfProxy {
             //   2nd hit  -> PocketCorroding = pocket dimension (+ vigor, sinkhole cooldown, LabAPI teleport events)
             //   Traumatized (escaped the pocket before) -> instant kill, same as humans
             // None of these effects has a human-only check, they work on any hub.
+            // Config scp_vs_scp_damage.scp106_attack: on an SCP, a configured value replaces all of that with plain damage.
+            var hasOverride = ScpDamageOverrides.TryGet(attack.Owner, target, ScpAttack.Scp106Attack, out var damage);
+
             using (new FpcBacktracker(attack.Owner, claimedOwnerPosition, claimedCamRotation)) {
-                attack.ServerShoot();
+                if (hasOverride) {
+                    ServerShootFixed(attack, target, damage);
+                }
+                else {
+                    attack.ServerShoot();
+                }
             }
+        }
+
+        // Scp106Attack.ServerShoot with only the damage: same shot check, cooldown, sinkhole cooldown, hitmarker;
+        // no Corroding, no pocket dimension, no vigor.
+        private static void ServerShootFixed(Scp106Attack attack, ReferenceHub target, float damage) {
+            if (!attack.VerifyShot()) {
+                return;
+            }
+
+            if (!target.playerStats.DealDamage(new ScpDamageHandler(attack.Owner, damage, DeathTranslations.PocketDecay))) {
+                return;
+            }
+
+            attack.SendCooldown(attack._hitCooldown);
+            attack.ReduceSinkholeCooldown();
+            Hitmarker.SendHitmarkerDirectly(attack.Owner, 1f);
         }
 
         private static bool TrySelectTarget(Scp106Attack attack, ReferenceHub? claimedTarget, Vector3 claimedTargetPosition,

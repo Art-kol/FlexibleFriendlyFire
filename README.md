@@ -19,6 +19,8 @@ duels, "SCP civil war" rounds and similar.
 - Player → player, player → role, role → player and role → role rules, one-way or mutual (mutual by default).
 - Player rules win over role rules, blocks win over allows. No rule = vanilla.
 - Player rules are dropped when that player dies or leaves. All rules are cleared when the round restarts.
+- Optional: while the vanilla friendly fire is on, SCPs may hurt each other too (config
+  `scp_vs_scp_with_server_friendly_fire`). Rules still win over it.
 - Works for all damage that has an attacker: firearms, explosives, melee (Jailbird and similar), SCP attacks.
 - A block also removes an SCP's influence on that player: SCP-173 isn't frozen by their gaze, SCP-096 isn't
   enraged by them, SCP-049 can't sense them, SCP-173 tantrum and SCP-939 amnestic cloud don't affect them.
@@ -34,10 +36,18 @@ When SCP **A** is allowed to hit SCP **B**:
 | SCP-106 | Attack (like on humans: the first hit corrodes, the second one sends B to the pocket dimension), stalk / hunter vision with the vanilla radius, in both directions |
 | SCP-173 | Is frozen by B's gaze, kills B by blink teleport, tantrum slows B (a neck snap without a blink is not supported) |
 | SCP-939 | Claws, lunge, amnestic cloud (also affects SCPs the owner may hit, never the owner), perception: sees B only within its own radius, no matter how many humans are alive |
-| SCP-3114 | Attacks |
+| SCP-3114 | Slap; its disguise fools B (B sees it as the human whose skin it wears) |
 
 Visibility side effects are handled too: an SCP-939 that is out of range or a buried SCP-106 doesn't trigger
 SCP-096 and doesn't freeze SCP-173, and an SCP-079 doesn't see a buried SCP-106 it may hit.
+
+The damage of every SCP attack against SCPs can be set in the config (`scp_vs_scp_damage`): default behaviour,
+a one-hit kill, a fixed amount or a percent of the target's maximum HP. With a set value the attack only deals that
+damage, without its effects (pocket dimension, cardiac arrest, corrosion, concussion).
+
+SCP-3114's disguise against SCPs: while it is active, an SCP that SCP-3114 may hurt gets SCP-3114 sent as the stolen
+human class (model, held item, unit name; it's not in the SCP list). The nickname is not changed: that SCP sees the
+real nickname of the SCP-3114 player.
 
 ### SCP-079
 Players SCP-079 may **not** hit (block rule):
@@ -52,9 +62,14 @@ SCPs SCP-079 **may** hit (allow rule) are treated like humans:
 - killing one of them with a Tesla gate it activated gives 5× the human-kill XP.
 
 Players blocked from hurting SCP-079 can't unlock or activate generators and can't break the recontainment
-button glass (neither by shooting nor with throwables). SCPs allowed to hurt at least one SCP-079:
+button glass (neither by shooting nor with throwables). SCPs allowed to hurt SCP-079:
 - can pull the lever of a generator (the generator door still has to be opened with a keycard first);
 - can break the recontainment button glass with their attacks; then **every** SCP-079 is recontained.
+
+With several SCP-079s, when a player or an SCP may hurt only some of them, the config (`scp079`) decides, separately
+for SCPs and humans: is one SCP-079 enough to use generators / the button or must it be all of them, and are all
+SCP-079s recontained or only the ones the player who broke the glass may hurt. Defaults: one is enough; an SCP
+recontains all of them, a human only the ones he isn't blocked from.
 
 ### CASSIE
 - An SCP killed by another SCP is announced as *"SCP-X TERMINATED BY SCP-Y"* (SCP-049-2 is read out correctly,
@@ -66,7 +81,7 @@ button glass (neither by shooting nor with throwables). SCPs allowed to hurt at 
 1. Download `FriendlyFireManager.dll` and `0Harmony.dll` from [Releases](https://github.com/Art-kol/FlexibleFriendlyFire/releases).
 2. Put `FriendlyFireManager.dll` into `LabAPI/plugins/global/` (or `LabAPI/plugins/<port>/`).
 3. Put `0Harmony.dll` into `LabAPI/dependencies/global/` (skip it if another plugin already installed Harmony 2.x).
-4. Give the permission to your staff groups (see below) and restart the server.
+4. Restart the server.
 
 The `LabAPI` folder is in
 - Windows: `%AppData%\SCP Secret Laboratory\LabAPI\`
@@ -78,17 +93,9 @@ The `LabAPI` folder is in
 
 ## Permissions
 
-The `fire` command needs the `ffm.manage` LabAPI permission (configurable). Add it to
-`LabAPI/configs/permissions.yml`; the group names are the Remote Admin groups from `config_remoteadmin.txt`:
-
-```yaml
-owner:
-  inherited_groups: []
-  permissions:
-  - ffm.manage
-```
-
-The server console can always use the command.
+Nothing extra: whoever may switch the vanilla friendly fire may use `fire`. That's the `ServerConfigs` Remote Admin
+permission (Server configs tab, `setconfig friendly_fire`), set per group in `config_remoteadmin.txt`. The server
+console can always use the command.
 
 ## Command
 
@@ -130,9 +137,50 @@ Role IDs:
 `LabAPI/configs/<port>/FriendlyFireManager/config.yml`:
 
 ```yaml
-# LabAPI permission needed to use the 'fire' command from the Remote Admin panel (LabAPI/configs/permissions.yml). Empty = everyone with RA access. The server console can always use it.
-command_permission: ffm.manage
+# true = while the vanilla friendly fire is on, SCPs may hurt each other too (rules still win)
+scp_vs_scp_with_server_friendly_fire: false
+# true = SCP-3114's disguise also fools the SCPs it may hurt
+scp3114_disguise_fools_scps: true
+# Damage of SCP attacks against OTHER SCPs (see the table below)
+scp_vs_scp_damage:
+  scp049_attack: 0
+  scp0492_claws: 0
+  scp079_tesla: 0
+  scp096_slap: 0
+  scp096_charge: 0
+  scp096_gate_kill: 0
+  scp106_attack: 0
+  scp173_snap: 0
+  scp939_claws: 0
+  scp939_lunge: 0
+  scp939_lunge_splash: 0
+  scp3114_slap: 0
+# Several SCP-079s, when a player / an SCP may hurt only some of them
+scp079:
+  # Any = may hurt at least one SCP-079, All = every SCP-079
+  scp_generators: Any
+  scp_recontainment_button: Any
+  # All = every SCP-079 is recontained, Attackable = only the ones the glass breaker may hurt
+  scp_recontainment_targets: All
+  human_generators: Any
+  human_recontainment_button: Any
+  human_recontainment_targets: Attackable
 ```
+
+The real file has a comment above every key.
+
+`scp_vs_scp_damage` values (only for SCPs that may hurt each other; humans are never affected):
+
+| Value | Effect |
+|---|---|
+| `0` | Default behaviour of the attack, with its effects |
+| `-1` | Kills in one hit |
+| `150` | Deals 150 damage (hume shield first, then HP) |
+| `25%` | Deals 25% of the target's maximum HP |
+
+Any value other than `0` turns the attack's effects off: SCP-106 doesn't corrode or send to the pocket dimension,
+SCP-049 doesn't stop the heart, SCP-096 doesn't concuss. Abilities that aren't attacks (sense, bloodlust, stalk,
+amnestic cloud, tantrum...) work as usual. SCP-096 only hits its targets, as with humans.
 
 The plugin can be turned off in `LabAPI/configs/<port>/FriendlyFireManager/properties.yml` (`is_enabled: false`).
 
@@ -166,12 +214,14 @@ Requirements: .NET SDK 8 or newer (any OS) and the `SCPSL_Data/Managed` folder o
 publicized DLL is needed.
 
 ### GitHub Actions
-- `.github/workflows/build.yml` builds every push and pull request; the DLLs are attached to the run as an artifact.
-- `.github/workflows/release.yml` builds when a GitHub release is published and attaches `FriendlyFireManager.dll`
-  and `0Harmony.dll` to it. Bump `<Version>` in `FriendlyFireManager/FriendlyFireManager.csproj` first.
+`.github/workflows/build.yml` builds the plugin on GitHub's servers:
+- on every push to `main`/`master`, every pull request and on a manual run (Actions → Build → Run workflow)
+  it checks that the code compiles and keeps the DLLs as an artifact of the run for 14 days;
+- when a GitHub release is published, it also attaches `FriendlyFireManager.dll` and `0Harmony.dll` to it.
+  Bump `<Version>` in `FriendlyFireManager/FriendlyFireManager.csproj` first.
 
-Both download the game DLLs from Steam with
-[Axwabo/scpsl-references-downloader](https://github.com/Axwabo/scpsl-references-downloader).
+The game DLLs are downloaded on every run with Valve's SteamCMD (dedicated server, app 996560, anonymous login).
+They exist only on the temporary build machine. No secrets or settings are needed.
 
 ## License
 
