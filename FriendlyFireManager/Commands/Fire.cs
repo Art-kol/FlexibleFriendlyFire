@@ -2,12 +2,12 @@
 using System.Collections.Generic;
 using System.Text;
 using CommandSystem;
-using LabApi.Features.Wrappers;
-using PlayerRoles;
 using FriendlyFireManager.Commands.HelpersForCommand;
 using FriendlyFireManager.Utilities;
+using LabApi.Features.Wrappers;
+using PlayerRoles;
 using Utils;
-using static FriendlyFireManager.StaticConstants;
+using static FriendlyFireManager.StaticData;
 
 namespace FriendlyFireManager.Commands {
     internal static class FireCommandHelper {
@@ -30,10 +30,10 @@ namespace FriendlyFireManager.Commands {
 
             if (reset && (arguments.Count == 0 || string.IsNullOrWhiteSpace(arguments.At(0)))) {
                 FireLogics.ClearAll();
-                
+
                 // ADDED:
                 FfProxy.ScpFfProxy.RequestRefresh();
-                
+
                 response = "All fire rules have been reset.";
                 return true;
             }

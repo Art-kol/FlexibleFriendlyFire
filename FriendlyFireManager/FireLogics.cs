@@ -1,14 +1,7 @@
-﻿using Hazards;
-using LabApi.Events.Handlers;
+﻿using System.Collections.Generic;
 using LabApi.Features.Wrappers;
 using PlayerRoles;
-using System.Collections.Generic;
-using static FriendlyFireManager.Handlers.FireChangingRoleEvent;
-using static FriendlyFireManager.StaticConstants;
-using static FriendlyFireManager.Handlers.FireHurtingEvents;
-using static FriendlyFireManager.Handlers.FirePlayerLeftEvent;
-using static FriendlyFireManager.Handlers.FireSCPEvents;
-using static FriendlyFireManager.Handlers.FireScp079Events;
+using static FriendlyFireManager.StaticData;
 
 namespace FriendlyFireManager {
     public static class FireLogics {
