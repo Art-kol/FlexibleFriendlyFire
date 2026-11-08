@@ -35,7 +35,7 @@ namespace FriendlyFireManager.FfProxy {
     //        SCP-939 with an FF SCP target -> Tutorial INSIDE the SCP it's aiming at, so its hitboxes
     //                                         sit where the lunge will collide
     //        everyone else                 -> Spectator, position never sent
-    //      Model: Fade 255 + 0.25 scale (+ inside the target SCP for 939), no footsteps.
+    //      Model: Fade 255 + 0.25 scale (+ inside the target SCP for 939), no footsteps, no nickname / info.
     //   3. The server ignores the proxy as a target and resolves the real one:
     //        Scp106AttackPatch - replaces ServerProcessCmd, picks the target itself.
     //        Scp939LungePatch  - only when the client hit the proxy: maps it to the real SCP behind it,
@@ -85,6 +85,17 @@ namespace FriendlyFireManager.FfProxy {
 
         // Max lead distance = attack range * this (so the proxy never leaves the attack range).
         public const float MAX_LEAD_FRACTION = 0.5f;
+
+        // Same for vertical movement (jumps, falls over a pit). Longer than the horizontal lead: on the client a remote
+        // player's height only follows the received one with Lerp(9 * deltaTime) (FpcMotor.UpdateThirdperson, ~0.11 s
+        // behind) on top of the ping. Without it a jumping / falling SCP-106 left its own attack range of the proxy.
+        public const float VERTICAL_LEAD_SECONDS = 0.25f;
+
+        // Max vertical lead = attack range * this.
+        public const float MAX_VERTICAL_LEAD_FRACTION = 1f;
+
+        // No new position from the SCP-106 client for this long = it stands still (velocity 0).
+        public const float STILL_AFTER_SECONDS = 0.25f;
 
         // ---- SCP-939 ----
 
@@ -287,7 +298,12 @@ namespace FriendlyFireManager.FfProxy {
                 : 2f;
         }
 
-        // Right under SCP-106 (+ a small lead when walking) - always inside the attack range.
+        // Right under SCP-106 (+ a lead when it moves, horizontally and vertically) - always inside the attack range.
+        //
+        // The SCP-106 client sees the proxy late: the server knows its position half a ping late, the proxy position
+        // needs another half back, and the client smooths remote players (height ~0.11 s behind). So the proxy is put
+        // where the SCP-106 will be by then. The server never moves the real dummy - it stays parked, only this sent
+        // position follows the SCP-106 (that's why noclip / gravity of the dummy don't matter here).
         private static Vector3 GetScp106Position(ReferenceHub scp106, Scp106Role role) {
             var position = role.FpcModule.Position;
             var range = GetAttackRange(role);
@@ -298,20 +314,29 @@ namespace FriendlyFireManager.FfProxy {
                 _trackers[scp106] = tracker;
             }
 
-            var dt = now - tracker.LastTime;
-            if (dt > 0.5f) {
+            // Velocity only from real position updates: this runs every network tick, the SCP-106 client may send
+            // its position less often, and a "no change" sample would drag the velocity to 0 mid-jump.
+            if (position != tracker.LastPosition) {
+                var dt = now - tracker.LastTime;
+                if (dt > 0.5f) {
+                    tracker.Velocity = Vector3.zero;
+                }
+                else if (dt > 0.0001f) {
+                    tracker.Velocity = Vector3.Lerp(tracker.Velocity, (position - tracker.LastPosition) / dt, 0.5f);
+                }
+
+                tracker.LastPosition = position;
+                tracker.LastTime = now;
+            }
+            else if (now - tracker.LastTime > STILL_AFTER_SECONDS) {
                 tracker.Velocity = Vector3.zero;
             }
-            else if (dt > 0.0001f) {
-                var velocity = (position - tracker.LastPosition) / dt;
-                velocity.y = 0f;
-                tracker.Velocity = Vector3.Lerp(tracker.Velocity, velocity, 0.5f);
-            }
 
-            tracker.LastPosition = position;
-            tracker.LastTime = now;
+            var velocity = tracker.Velocity;
+            var lead = Vector3.ClampMagnitude(new Vector3(velocity.x, 0f, velocity.z) * LEAD_SECONDS, range * MAX_LEAD_FRACTION);
+            var maxVertical = range * MAX_VERTICAL_LEAD_FRACTION;
+            lead.y = Mathf.Clamp(velocity.y * VERTICAL_LEAD_SECONDS, -maxVertical, maxVertical);
 
-            var lead = Vector3.ClampMagnitude(tracker.Velocity * LEAD_SECONDS, range * MAX_LEAD_FRACTION);
             return position + lead + (Vector3.down * (range * VERTICAL_OFFSET_FRACTION));
         }
 
@@ -620,8 +645,26 @@ namespace FriendlyFireManager.FfProxy {
         //              Side effect on SCP-939 clients: Scp939VisibilityController never sees the model fading
         //              out from a non-zero value, so it never disables the proxy's hitbox colliders.
         // SilentWalk -> extra footstep muting on top of the "not grounded" trick in ScpFfProxySyncDataPatch.
+        // Player info -> nothing shown when a SCP-106 / SCP-939 looks at it: no nickname, badge, role...
+        //              (_playerInfoToShow = none, and ViewRange 0 so the client never shows the info at all).
+        //              Fade hides only the model; the hitboxes (needed for the SCP-939 lunge) still let the client
+        //              show the nickname under the crosshair.
+        // Not Invisible (SCP-268): it's purely server-side - the server stops sending the position, but the proxy
+        // MUST be sent to SCP-106 / SCP-939 (OnValidatedVisibility overrides it), so on their clients it would change
+        // nothing and the model would be visible.
         // Re-applied every Maintain tick in case something (role change, admin command) cleared them.
         private static void ApplyHidingEffects(ReferenceHub hub) {
+            var nicknameSync = hub.nicknameSync;
+            if (nicknameSync != null) {
+                if (nicknameSync.ShownPlayerInfo != 0) {
+                    nicknameSync.ShownPlayerInfo = 0;
+                }
+
+                if (nicknameSync.ViewRange != 0f) {
+                    nicknameSync.NetworkViewRange = 0f;
+                }
+            }
+
             var effects = hub.playerEffectsController;
 
             var fade = effects.GetEffect<Fade>();

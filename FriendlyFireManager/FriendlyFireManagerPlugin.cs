@@ -24,7 +24,7 @@ namespace FriendlyFireManager {
 
         public override string Description => "Rule-based friendly fire between any players and roles, including SCP vs SCP with SCP abilities.";
 
-        public override string Author => "YOUR_NAME";
+        public override string Author => "Dr. Wondertainment";
 
         // Version of Northwood.LabAPI the plugin is compiled against (FriendlyFireManager.csproj)
         public override Version RequiredApiVersion { get; } = new(1, 1, 7);

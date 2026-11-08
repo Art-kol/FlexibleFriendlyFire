@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.1
+
+- Fixed: a player hit himself with full damage when an FF rule covered his own role (`fire allow RR * *`...):
+  the Micro-HID beam starts inside the shooter's own hitboxes and killed him. Self-damage is now never decided by
+  FF rules, only by the vanilla self-damage rules of the weapon.
+- SCP-106 attack proxy follows vertical movement too (jumps, falls over pits): SCP-106 can hit FF SCPs in the air.
+- The proxy dummy shows no nickname / player info when SCP-106 / SCP-939 look at it.
+
 ## 1.1.0
 
 - `fire` needs no extra permission any more: whoever may switch the vanilla friendly fire (Remote Admin

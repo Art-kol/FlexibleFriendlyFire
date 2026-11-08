@@ -229,6 +229,14 @@ namespace FriendlyFireManager {
         // ================= DAMAGE CHECK =================
 
         public static bool? CanDamage(ReferenceHub attacker, ReferenceHub target) {
+            // Damage to yourself is never decided by FF rules - only by the vanilla AllowSelfDamage of the damage
+            // (own grenades hurt, an own Micro-HID beam / bullet doesn't). Otherwise a rule that covers the player's own
+            // role ("fire allow RR * *", "fire allow RR 3 3", a PR rule for his own role...) made FireHurtingEvents force
+            // full FF on self-hits: the Micro-HID beam starts inside the shooter's own hitboxes and killed him.
+            if (attacker == target) {
+                return null;
+            }
+
             var AttackerPlayer = Player.Get(attacker);
             var TargetPlayer = Player.Get(target);
 
