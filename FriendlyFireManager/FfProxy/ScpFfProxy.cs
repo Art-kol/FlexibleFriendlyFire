@@ -649,6 +649,10 @@ namespace FriendlyFireManager.FfProxy {
         //              (_playerInfoToShow = none, and ViewRange 0 so the client never shows the info at all).
         //              Fade hides only the model; the hitboxes (needed for the SCP-939 lunge) still let the client
         //              show the nickname under the crosshair.
+        // Badge       -> every dummy gets the "Dummy" badge of DummyUtils.DummyGroup (ServerRoles.Start) and the client
+        //              shows it even without the player info. Only the badge text / color SyncVars are cleared (not
+        //              SetGroup(null): no group events, no console spam); the group itself stays, IsDummy doesn't
+        //              depend on it (ClientInstanceMode), so RA still lists the proxy as a dummy.
         // Not Invisible (SCP-268): it's purely server-side - the server stops sending the position, but the proxy
         // MUST be sent to SCP-106 / SCP-939 (OnValidatedVisibility overrides it), so on their clients it would change
         // nothing and the model would be visible.
@@ -663,6 +667,12 @@ namespace FriendlyFireManager.FfProxy {
                 if (nicknameSync.ViewRange != 0f) {
                     nicknameSync.NetworkViewRange = 0f;
                 }
+            }
+
+            var serverRoles = hub.serverRoles;
+            if (serverRoles != null && !string.IsNullOrEmpty(serverRoles.Network_myText)) {
+                serverRoles.SetText(null);
+                serverRoles.SetColor(null);
             }
 
             var effects = hub.playerEffectsController;
