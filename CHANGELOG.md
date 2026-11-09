@@ -8,6 +8,9 @@
 - SCP-106 attack proxy follows vertical movement too (jumps, falls over pits): SCP-106 can hit FF SCPs in the air.
 - The proxy dummy shows no nickname / player info when SCP-106 / SCP-939 look at it.
 - The proxy dummy is hidden from the player list (Tab), the Remote Admin player list and the RA dummy actions.
+- Fixed: SCP-939 played its "damaged" sound and animation every time it appeared in view
+  (role re-sent to a client replayed one-shot subroutine RPCs). Other replayed
+  one-shot sounds (SCP-173, SCP-049-2, SCP-096 hits, SCP-3114 voice lines, SCP-939 mimicry) are fixed the same way.
 
 ## 1.1.0
 
