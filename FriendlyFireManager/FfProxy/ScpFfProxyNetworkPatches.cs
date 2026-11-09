@@ -3,6 +3,7 @@ using PlayerRoles;
 using PlayerRoles.FirstPersonControl;
 using PlayerRoles.FirstPersonControl.NetworkMessages;
 using RelativePositioning;
+using RemoteAdmin.Communication;
 
 namespace FriendlyFireManager.FfProxy {
     // Which role every client sees for the proxy:
@@ -74,6 +75,15 @@ namespace FriendlyFireManager.FfProxy {
 
             __result = false;
             return false;
+        }
+    }
+
+    // Remote Admin "Dummies" panel (RaDummyActions): the proxy's actions are never sent, like it isn't in the RA player
+    // list (ScpFfProxy.OnRaPlayerListAddingPlayer).
+    [HarmonyPatch(typeof(RaDummyActions), nameof(RaDummyActions.AppendDummy))]
+    public static class ScpFfProxyRaDummyActionsPatch {
+        public static bool Prefix(ReferenceHub dummy) {
+            return !ScpFfProxy.IsProxy(dummy);
         }
     }
 }

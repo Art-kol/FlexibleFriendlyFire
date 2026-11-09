@@ -7,6 +7,7 @@
   FF rules, only by the vanilla self-damage rules of the weapon.
 - SCP-106 attack proxy follows vertical movement too (jumps, falls over pits): SCP-106 can hit FF SCPs in the air.
 - The proxy dummy shows no nickname / player info when SCP-106 / SCP-939 look at it.
+- The proxy dummy is hidden from the player list (Tab), the Remote Admin player list and the RA dummy actions.
 
 ## 1.1.0
 

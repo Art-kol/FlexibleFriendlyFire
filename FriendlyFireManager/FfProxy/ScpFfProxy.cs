@@ -166,6 +166,7 @@ namespace FriendlyFireManager.FfProxy {
             PlayerEvents.ChangingRole += OnChangingRole;
             PlayerEvents.ChangedRole += OnChangedRole;
             PlayerEvents.Left += OnLeft;
+            PlayerEvents.RaPlayerListAddingPlayer += OnRaPlayerListAddingPlayer;
             StartLoop();
         }
 
@@ -179,6 +180,7 @@ namespace FriendlyFireManager.FfProxy {
             PlayerEvents.ChangingRole -= OnChangingRole;
             PlayerEvents.ChangedRole -= OnChangedRole;
             PlayerEvents.Left -= OnLeft;
+            PlayerEvents.RaPlayerListAddingPlayer -= OnRaPlayerListAddingPlayer;
             Timing.KillCoroutines(_maintainHandle);
             Despawn();
             Reset();
@@ -449,6 +451,14 @@ namespace FriendlyFireManager.FfProxy {
 
         // ================= EVENTS =================
 
+        // Remote Admin player list: the proxy is never listed (nobody can select / kick / forceclass it by mistake).
+        // The "Dummies" actions of the RA panel skip it too (ScpFfProxyRaDummyActionsPatch).
+        private static void OnRaPlayerListAddingPlayer(PlayerRaPlayerListAddingPlayerEventArgs ev) {
+            if (ev.Target != null && IsProxy(ev.Target.ReferenceHub)) {
+                ev.IsAllowed = false;
+            }
+        }
+
         // FpcServerPositionDistributor.WriteAll -> decides if the target's position is sent to the receiver.
         private static void OnValidatedVisibility(PlayerValidatedVisibilityEventArgs ev) {
             if (ev.Target == null || !IsProxy(ev.Target.ReferenceHub)) {
@@ -649,6 +659,7 @@ namespace FriendlyFireManager.FfProxy {
         //              (_playerInfoToShow = none, and ViewRange 0 so the client never shows the info at all).
         //              Fade hides only the model; the hitboxes (needed for the SCP-939 lunge) still let the client
         //              show the nickname under the crosshair.
+        // Player list -> ServerRoles.HideFromPlayerList (Tab). The RA player list is filtered in OnRaPlayerListAddingPlayer.
         // Badge       -> every dummy gets the "Dummy" badge of DummyUtils.DummyGroup (ServerRoles.Start) and the client
         //              shows it even without the player info. Only the badge text / color SyncVars are cleared (not
         //              SetGroup(null): no group events, no console spam); the group itself stays, IsDummy doesn't
@@ -670,9 +681,16 @@ namespace FriendlyFireManager.FfProxy {
             }
 
             var serverRoles = hub.serverRoles;
-            if (serverRoles != null && !string.IsNullOrEmpty(serverRoles.Network_myText)) {
-                serverRoles.SetText(null);
-                serverRoles.SetColor(null);
+            if (serverRoles != null) {
+                if (!string.IsNullOrEmpty(serverRoles.Network_myText)) {
+                    serverRoles.SetText(null);
+                    serverRoles.SetColor(null);
+                }
+
+                // Not in the player list (Tab) of any client
+                if (!serverRoles.HideFromPlayerList) {
+                    serverRoles.NetworkHideFromPlayerList = true;
+                }
             }
 
             var effects = hub.playerEffectsController;
